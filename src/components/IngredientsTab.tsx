@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { Plus, Edit2, Trash2, ExternalLink } from 'lucide-react';
 import { useStore } from '../store';
-import { Ingredient } from '../types';
+import { Ingredient, Unit } from '../types';
 import { formatRM } from '../lib/format';
 import { Dialog } from './Dialog';
 import { SearchInput } from './SearchInput';
@@ -54,7 +54,7 @@ export function IngredientsTab() {
         name: form.name || 'Unnamed Ingredient',
         packPrice: Number(form.packPrice) || 0,
         packSize: Number(form.packSize) || 0,
-        unit: form.unit as any,
+        unit: form.unit as Unit,
         supplierLink: form.supplierLink || undefined,
       };
 
@@ -215,7 +215,7 @@ export function IngredientsTab() {
                 <button
                   key={u}
                   type="button"
-                  onClick={() => setForm({ ...form, unit: u as any })}
+                  onClick={() => setForm({ ...form, unit: u as Unit })}
                   className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-all ${
                     form.unit === u 
                       ? 'bg-brand-matcha text-white border-brand-matcha' 

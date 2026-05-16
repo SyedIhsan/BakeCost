@@ -33,6 +33,7 @@ type Tab = 'products' | 'ingredients' | 'packaging';
 function UserMenu() {
   const { user, signOut } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [avatarBroken, setAvatarBroken] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -61,8 +62,14 @@ function UserMenu() {
         onClick={() => setIsOpen(!isOpen)}
         className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 hover:border-brand-matcha transition-colors flex items-center justify-center bg-brand-matcha/10 flex-shrink-0"
       >
-        {avatarUrl ? (
-          <img src={avatarUrl} alt={fullName} className="w-full h-full object-cover" />
+        {avatarUrl && !avatarBroken ? (
+          <img
+            src={avatarUrl}
+            alt={fullName}
+            onError={() => setAvatarBroken(true)}
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover"
+          />
         ) : (
           <span className="text-xs font-bold text-brand-matcha">{firstLetter}</span>
         )}
@@ -115,47 +122,85 @@ export default function App() {
     try {
       setIsDeleting(true);
       let imported = 0;
-      const total = SAMPLE_INGREDIENTS.length + SAMPLE_PACKAGING.length + SAMPLE_PRODUCTS.length;
 
-      // Import ingredients
+      // Import supabase once outside the loops
+      const { supabase } = await import('./lib/supabase');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.id) throw new Error('Not authenticated');
+
+      // Phase A: Import ingredients and collect real IDs
+      const ingredientMap = new Map<string, string>();
       for (const ing of SAMPLE_INGREDIENTS) {
         try {
-          await useStore.getState().addIngredient({
-            name: ing.name,
-            packPrice: ing.packPrice,
-            packSize: ing.packSize,
-            unit: ing.unit,
-            supplierLink: ing.supplierLink,
-          });
-          imported++;
+          const { data, error } = await supabase
+            .from('ingredients')
+            .insert({
+              user_id: user.id,
+              name: ing.name,
+              pack_price: ing.packPrice,
+              pack_size: ing.packSize,
+              unit: ing.unit,
+              supplier_link: ing.supplierLink || null,
+            })
+            .select()
+            .single();
+
+          if (error) throw error;
+          if (data) {
+            ingredientMap.set(ing.name, data.id);
+            imported++;
+          }
         } catch (err) {
           console.error('Failed to import ingredient:', err);
         }
       }
 
-      // Import packaging
+      // Phase B: Import packaging and collect real IDs
+      const packagingMap = new Map<string, string>();
       for (const pkg of SAMPLE_PACKAGING) {
         try {
-          await useStore.getState().addPackaging({
-            name: pkg.name,
-            packPrice: pkg.packPrice,
-            packQuantity: pkg.packQuantity,
-            supplierLink: pkg.supplierLink,
-          });
-          imported++;
+          const { data, error } = await supabase
+            .from('packaging')
+            .insert({
+              user_id: user.id,
+              name: pkg.name,
+              pack_price: pkg.packPrice,
+              pack_quantity: pkg.packQuantity,
+              supplier_link: pkg.supplierLink || null,
+            })
+            .select()
+            .single();
+
+          if (error) throw error;
+          if (data) {
+            packagingMap.set(pkg.name, data.id);
+            imported++;
+          }
         } catch (err) {
           console.error('Failed to import packaging:', err);
         }
       }
 
-      // Import products
+      // Phase C & D: Import products with mapped IDs
       for (const prod of SAMPLE_PRODUCTS) {
         try {
+          // Convert recipe ingredient names to real IDs
+          const resolvedRecipe = prod.recipe.map(item => ({
+            ingredientId: ingredientMap.get(item.ingredientId as string) || item.ingredientId,
+            amountUsed: item.amountUsed,
+          }));
+
+          // Convert packaging names to real IDs
+          const resolvedPackaging = prod.packaging.map(item => ({
+            packagingId: packagingMap.get(item.packagingId as string) || item.packagingId,
+            quantityUsed: item.quantityUsed,
+          }));
+
           await useStore.getState().addProduct({
             name: prod.name,
             quantityProducedPerBatch: prod.quantityProducedPerBatch,
-            recipe: prod.recipe,
-            packaging: prod.packaging,
+            recipe: resolvedRecipe,
+            packaging: resolvedPackaging,
             overhead: prod.overhead,
             labor: prod.labor,
             marketingPercentage: prod.marketingPercentage,
@@ -168,6 +213,12 @@ export default function App() {
           console.error('Failed to import product:', err);
         }
       }
+
+      // Phase E: Refresh store to display seeded data
+      const { fetchIngredients, fetchPackaging, fetchProducts } = useStore.getState();
+      await fetchIngredients();
+      await fetchPackaging();
+      await fetchProducts();
 
       alert(`Sample data loaded! Imported ${imported} items.`);
       setShowLoadSampleConfirm(false);

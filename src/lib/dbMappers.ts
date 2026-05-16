@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Ingredient, PackagingItem, Product } from '../types';
+import { Ingredient, PackagingItem, Product, Unit } from '../types';
 import type { Database } from '../types/database';
 
 // Type aliases for readability
@@ -18,12 +18,16 @@ type ProductsInsert = Database['public']['Tables']['products']['Insert'];
  * Convert DB ingredient (snake_case) to app Ingredient (camelCase)
  */
 export function ingredientFromDb(row: IngredientsRow): Ingredient {
+  // Validate and cast unit to known Unit type
+  const validUnits: Unit[] = ['g', 'ml', 'unit'];
+  const unit = validUnits.includes(row.unit as Unit) ? (row.unit as Unit) : 'g';
+
   return {
     id: row.id,
     name: row.name,
     packPrice: row.pack_price,
     packSize: row.pack_size,
-    unit: row.unit,
+    unit,
     supplierLink: row.supplier_link || undefined,
   };
 }
@@ -76,12 +80,12 @@ export function productFromDb(row: ProductsRow): Product {
     id: row.id,
     name: row.name,
     quantityProducedPerBatch: row.quantity_produced_per_batch,
-    recipe: row.recipe,
-    packaging: row.packaging,
-    overhead: row.overhead,
-    labor: row.labor,
+    recipe: (row.recipe as unknown) as Product['recipe'],
+    packaging: (row.packaging as unknown) as Product['packaging'],
+    overhead: (row.overhead as unknown) as Product['overhead'],
+    labor: (row.labor as unknown) as Product['labor'],
     marketingPercentage: row.marketing_percentage,
-    margins: row.margins,
+    margins: (row.margins as unknown) as Product['margins'],
     sstEnabled: row.sst_enabled,
     decidedSalePrice: row.decided_sale_price || undefined,
     createdAt: new Date(row.created_at).getTime(),

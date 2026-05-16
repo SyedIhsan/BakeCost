@@ -16,6 +16,11 @@ import {
   productToDb,
 } from './lib/dbMappers';
 
+// Type aliases for Supabase Insert operations
+type IngredientsInsert = Database['public']['Tables']['ingredients']['Insert'];
+type PackagingInsert = Database['public']['Tables']['packaging']['Insert'];
+type ProductsInsert = Database['public']['Tables']['products']['Insert'];
+
 interface BakeStore {
   ingredients: Ingredient[];
   packaging: PackagingItem[];
@@ -159,7 +164,7 @@ export const useStore = create<BakeStore>((set, get) => ({
         sessionData.user.id
       );
 
-      const { data, error } = await supabase.from('ingredients').insert([dbIngredient as any] as any).select().single();
+      const { data, error } = await supabase.from('ingredients').insert([dbIngredient]).select().single();
 
       if (error) throw error;
 
@@ -182,8 +187,7 @@ export const useStore = create<BakeStore>((set, get) => ({
         (await supabase.auth.getUser()).data.user!.id
       );
 
-      // @ts-expect-error - Supabase type inference limitation
-      const { error } = await supabase.from('ingredients').update(dbUpdate as any).eq('id', id);
+      const { error } = await supabase.from('ingredients').update(dbUpdate).eq('id', id);
 
       if (error) throw error;
 
@@ -232,7 +236,7 @@ export const useStore = create<BakeStore>((set, get) => ({
         sessionData.user.id
       );
 
-      const { data, error } = await supabase.from('packaging').insert([dbPackaging as any] as any).select().single();
+      const { data, error } = await supabase.from('packaging').insert([dbPackaging]).select().single();
 
       if (error) throw error;
 
@@ -255,8 +259,7 @@ export const useStore = create<BakeStore>((set, get) => ({
         (await supabase.auth.getUser()).data.user!.id
       );
 
-      // @ts-expect-error - Supabase type inference limitation
-      const { error } = await supabase.from('packaging').update(dbUpdate as any).eq('id', id);
+      const { error } = await supabase.from('packaging').update(dbUpdate).eq('id', id);
 
       if (error) throw error;
 
@@ -309,7 +312,7 @@ export const useStore = create<BakeStore>((set, get) => ({
 
       const dbProduct = productToDb(fullProduct, sessionData.user.id);
 
-      const { data, error } = await supabase.from('products').insert([dbProduct as any] as any).select().single();
+      const { data, error } = await supabase.from('products').insert([dbProduct]).select().single();
 
       if (error) throw error;
 
@@ -332,8 +335,7 @@ export const useStore = create<BakeStore>((set, get) => ({
         (await supabase.auth.getUser()).data.user!.id
       );
 
-      // @ts-expect-error - Supabase type inference limitation
-      const { error } = await supabase.from('products').update(dbUpdate as any).eq('id', id);
+      const { error } = await supabase.from('products').update(dbUpdate).eq('id', id);
 
       if (error) throw error;
 

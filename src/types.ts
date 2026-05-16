@@ -3,12 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+export type Unit = 'g' | 'ml' | 'unit';
+
 export type Ingredient = {
   id: string;           // uuid, replaces the 3-digit code
   name: string;         // "Salted Butter Farm Fresh"
   packPrice: number;    // RM 11
   packSize: number;     // 200
-  unit: 'g' | 'ml' | 'unit';
+  unit: Unit;
   supplierLink?: string;
 };
 
